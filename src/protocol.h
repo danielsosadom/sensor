@@ -1,28 +1,26 @@
 #pragma once
 #include <Arduino.h>
 
-/* ----------------------------------------------------------------------
- *  Protocolo binario supervisor <-> sensor (Serial1)
+/*
+ * Protocolo supervisor <-> sensor por Serial1
  *
- *  Trama:  | opcode (1 byte) | len (1 byte) | body (len bytes) |
+ * Trama:  | opcode (1 byte) | len (1 byte) | body (len bytes) |
  *
- *  Peticiones (supervisor -> sensor) y respuestas (sensor -> supervisor):
+ * OP_US        req: -                       ACK: [n, addr_1, ..., addr_n]
+ * OP_ONE_SHOT  req: [addr]                  ACK: [addr, med_hi, med_lo, unit]
+ * OP_ON        req: [addr, per_hi, per_lo]  ACK: [addr]
+ * OP_OFF       req: [addr]                  ACK: [addr]
+ * OP_UNIT      req: [addr, unit]            ACK: [addr]
+ * OP_DELAY     req: [addr, del_hi, del_lo]  ACK: [addr]
+ * OP_STATUS    req: [addr]                  ACK: [addr, del_hi, del_lo, unit,
+ *                                                 periodic(0/1), per_hi, per_lo]
+ * Error:                                    NACK: [err_code]
  *
- *  OP_US        req: -                     ACK: [n, addr_1, ..., addr_n]
- *  OP_ONE_SHOT  req: [addr]                ACK: [addr, med_hi, med_lo, unit]
- *  OP_ON        req: [addr, per_hi, per_lo]  ACK: [addr]
- *  OP_OFF       req: [addr]                ACK: [addr]
- *  OP_UNIT      req: [addr, unit]          ACK: [addr]
- *  OP_DELAY     req: [addr, del_hi, del_lo]  ACK: [addr]
- *  OP_STATUS    req: [addr]                ACK: [addr, del_hi, del_lo, unit,
- *                                                periodic(0/1), per_hi, per_lo]
- *  Error en cualquier comando:             NACK: [err_code]
+ * El sensor envia por su cuenta OP_MEASSURE [addr, med_hi, med_lo, unit]
+ * en el disparo periodico.
  *
- *  Asincrono (sensor -> supervisor, disparo periodico):
- *  OP_MEASSURE  [addr, med_hi, med_lo, unit]
- *
- *  Todos los valores de 16 bits van en big-endian.
- * ---------------------------------------------------------------------- */
+ * Los valores de 16 bits van en big-endian.
+ */
 
 #define MAX_BODY 32
 #define RESPONSE_TIMEOUT_MS 1000UL
@@ -48,12 +46,12 @@
 #define ERR_I2C 0x02
 #define ERR_BAD_ARGS 0x03
 #define ERR_UNKNOWN_OP 0x04
-#define ERR_TOO_SOON 0x05  // no ha pasado el retardo minimo desde el ultimo disparo
+#define ERR_TOO_SOON 0x05
 
 struct Meassure {
   byte repr;
-  const char *name;    // nombre aceptado en el comando "unit"
-  const char *symbol;  // simbolo mostrado junto a la medida
+  const char *name;    // nombre que acepta el comando "unit"
+  const char *symbol;
 };
 
 constexpr Meassure meassures[] = {
@@ -70,5 +68,5 @@ struct Frame {
 
 bool sendFrame(byte opcode, byte len, const byte *body);
 
-// Lee una trama completa; false si pasa timeoutMs sin recibir algun byte
+// false si pasan timeoutMs sin recibir el siguiente byte
 bool readFrame(Frame &out, uint32_t timeoutMs = RESPONSE_TIMEOUT_MS);

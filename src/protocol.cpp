@@ -9,7 +9,6 @@ bool sendFrame(byte opcode, byte len, const byte *body) {
   return true;
 }
 
-// Espera un byte por Serial1 como mucho timeoutMs (igual que echo_example)
 static bool readByte(byte &data, uint32_t timeoutMs) {
   uint32_t last_ms = millis();
   while (millis() - last_ms < timeoutMs) {
